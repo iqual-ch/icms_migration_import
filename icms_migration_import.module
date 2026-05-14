@@ -1,0 +1,10 @@
+<?php
+
+/**
+ * @file
+ * ICMS Migration Import module.
+ *
+ * Provides a Drush command (`icms-migration:import`) that consumes the
+ * `icms-import-plan.json` produced by the icms-migration-workbench and
+ * creates ICMS pages, paragraphs and media in the target Drupal site.
+ */

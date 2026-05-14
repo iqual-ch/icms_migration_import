@@ -1,0 +1,11 @@
+name: ICMS Migration Import
+description: Drush-driven importer that consumes an icms-import-plan.json produced by the icms-migration-workbench and creates ICMS pages, paragraphs and media in the target Drupal site.
+package: ICMS
+type: module
+core_version_requirement: ^10.3 || ^11
+dependencies:
+  - drupal:node
+  - drupal:path_alias
+  - drupal:file
+  - drupal:media
+  - paragraphs:paragraphs
