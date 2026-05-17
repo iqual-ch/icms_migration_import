@@ -1,0 +1,11 @@
+id: icms_migration
+label: ICMS Migration
+description: Imports an ICMS migration plan (icms-import-plan.json) produced by the icms-migration-workbench.
+source_type: ICMS import plan (JSON)
+shared_configuration:
+  source:
+    # The path is normally set at runtime by `drush icms-migration:run <plan>`,
+    # which writes it to State (icms_migration_import.plan_path). The source
+    # plugins fall back to this configuration value when State is empty,
+    # which is useful for debugging via plain `drush migrate:import`.
+    plan_path: ''

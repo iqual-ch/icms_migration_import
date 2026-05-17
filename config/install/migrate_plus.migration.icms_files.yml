@@ -1,0 +1,28 @@
+id: icms_files
+label: 'ICMS Migration · Files'
+migration_group: icms_migration
+migration_tags:
+  - icms
+
+source:
+  plugin: icms_plan_files
+
+process:
+  filename: filename
+  filemime:
+    plugin: default_value
+    source: mimeType
+    default_value: 'application/octet-stream'
+  uid:
+    plugin: default_value
+    default_value: 1
+  status:
+    plugin: default_value
+    default_value: 1
+  # Download the remote file and use the resulting public:// URI.
+  uri:
+    plugin: icms_file_download
+    source: sourceUrl
+
+destination:
+  plugin: 'entity:file'

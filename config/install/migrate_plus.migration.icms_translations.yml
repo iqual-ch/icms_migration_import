@@ -1,0 +1,43 @@
+id: icms_translations
+label: 'ICMS Migration · Page translations'
+migration_group: icms_migration
+migration_tags:
+  - icms
+
+source:
+  plugin: icms_plan_translations
+
+process:
+  # Look up the parent node id via the icms_pages migration.
+  nid:
+    plugin: migration_lookup
+    migration: icms_pages
+    source: sourceUuid
+    no_stub: true
+  # Skip rows whose parent was not imported (e.g. blocked pages).
+  _nid_required:
+    plugin: skip_on_empty
+    method: row
+    source: '@nid'
+  langcode: langcode
+  title: title
+  content_translation_source:
+    plugin: default_value
+    default_value: und
+
+  _unpack_fields:
+    plugin: icms_field_value
+    source: fields
+    media_migration: icms_media
+
+  'path/alias': pathAlias
+  'path/langcode': langcode
+
+destination:
+  plugin: 'entity:node'
+  translations: true
+  default_bundle: icms_page
+
+migration_dependencies:
+  required:
+    - icms_pages

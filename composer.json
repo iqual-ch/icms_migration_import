@@ -1,6 +1,6 @@
 {
   "name": "iqual/icms_migration_import",
-  "description": "Imports an ICMS migration plan (icms-import-plan.json) into a Drupal ICMS site: creates ICMS pages, paragraphs and media from upstream PageDesigner exports.",
+  "description": "Migrate-API driven importer that consumes an icms-import-plan.json produced by the icms-migration-workbench and creates ICMS pages, paragraphs, media and files in the target Drupal site.",
   "type": "drupal-custom-module",
   "license": "GPL-2.0-or-later",
   "repositories": [
@@ -12,6 +12,8 @@
   "require": {
     "php": "^8.1",
     "drupal/core": "^10.3 || ^11",
+    "drupal/migrate_plus": "^6.0",
+    "drupal/migrate_tools": "^6.0",
     "drupal/paragraphs": "^1.18"
   },
   "extra": {

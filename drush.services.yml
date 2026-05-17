@@ -1,9 +1,0 @@
-services:
-  icms_migration_import.commands:
-    class: Drupal\icms_migration_import\Commands\IcmsMigrationImportCommands
-    tags:
-      - { name: drush.command }
-    arguments:
-      - '@icms_migration_import.plan_reader'
-      - '@icms_migration_import.importer'
-      - '@icms_migration_import.media_importer'

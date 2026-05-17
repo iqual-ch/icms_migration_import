@@ -1,0 +1,37 @@
+id: icms_media
+label: 'ICMS Migration · Media'
+migration_group: icms_migration
+migration_tags:
+  - icms
+
+source:
+  plugin: icms_plan_media
+
+process:
+  uuid: uuid
+  bundle: bundle
+  name: label
+  langcode: langcode
+  status:
+    plugin: default_value
+    default_value: 1
+
+  # Each entry in `files` becomes one source-field reference. The field name
+  # itself is part of the plan (e.g. field_media_image, field_media_file).
+  # We use sub_process + icms_field_value-style unpack so the destination
+  # column name is dynamic.
+  _attach_files:
+    plugin: icms_media_files
+    source: files
+
+  # Optional extra fields (e.g. field_media_oembed_video).
+  _unpack_fields:
+    plugin: icms_field_value
+    source: fields
+
+destination:
+  plugin: 'entity:media'
+
+migration_dependencies:
+  required:
+    - icms_files
