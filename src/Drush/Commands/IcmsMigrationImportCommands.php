@@ -158,7 +158,10 @@ class IcmsMigrationImportCommands extends DrushCommands {
       $opts['limit'] = (int) $options['limit'];
     }
     $process = Drush::drush(Drush::aliasManager()->getSelf(), $command, $args, $opts);
-    $process->setTty(Drush::input()->isInteractive());
+    // Always run without TTY: the wrapper is typically invoked from CI or
+    // from `ddev drush ...` where /dev/tty is not available even though
+    // Drush's own input may report itself as interactive.
+    $process->setTty(FALSE);
     $process->mustRun(function (string $type, string $buffer): void {
       $this->output()->write($buffer);
     });
