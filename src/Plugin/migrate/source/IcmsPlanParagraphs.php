@@ -76,7 +76,7 @@ class IcmsPlanParagraphs extends IcmsPlanBase {
   /**
    * {@inheritdoc}
    */
-  public function count($refresh = FALSE) {
+  public function count($refresh = FALSE): int {
     return count($this->rows());
   }
 

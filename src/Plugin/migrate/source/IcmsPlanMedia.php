@@ -42,7 +42,7 @@ class IcmsPlanMedia extends IcmsPlanBase {
   /**
    * {@inheritdoc}
    */
-  public function count($refresh = FALSE) {
+  public function count($refresh = FALSE): int {
     $plan = $this->loadPlan();
     return count(array_filter($plan['media'] ?? [], fn($m) => isset($m['sourceMediaId'])));
   }
