@@ -135,6 +135,11 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
       return $out === [] ? NULL : $out;
     }
 
+    // Plan multi-value wrapper: {source: '...', values: [...]}.
+    if (array_key_exists('values', $def) && is_array($def['values'])) {
+      return $this->normalize(array_values($def['values']));
+    }
+
     // Planning-only markers — never written.
     if (isset($def['status']) || isset($def['source'])) {
       return NULL;
