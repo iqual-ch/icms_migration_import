@@ -35,6 +35,23 @@ class IcmsMigrationImportCommands extends DrushCommands {
   public const STATE_KEY = 'icms_migration_import.plan_path';
   public const GROUP = 'icms_migration';
 
+  /**
+   * Explicit dependency-ordered list of the migrations in the group.
+   *
+   * `migrate:import --group` runs migrations in declaration order and aborts
+   * children when a parent ends with non-zero failures. We bypass that by
+   * running each migration sequentially in this order — files first, then
+   * media (depends on files), then paragraphs, then pages (depends on
+   * paragraphs), then translations (depend on pages).
+   */
+  protected const MIGRATION_ORDER = [
+    'icms_files',
+    'icms_media',
+    'icms_paragraphs',
+    'icms_pages',
+    'icms_translations',
+  ];
+
   public function __construct(
     protected StateInterface $state,
   ) {
@@ -74,17 +91,32 @@ class IcmsMigrationImportCommands extends DrushCommands {
 
     if (!empty($options['rollback-first'])) {
       $this->io()->section('Rollback existing data');
-      $code = $this->invokeMigrate('migrate:rollback', $options);
-      if ($code !== 0) {
-        $this->logger()->warning("migrate:rollback exited with code $code (continuing).");
+      // Rollback in reverse dependency order so child rows go first.
+      foreach (array_reverse(self::MIGRATION_ORDER) as $id) {
+        $code = $this->invokeMigrate('migrate:rollback', ['migrations' => $id] + $options);
+        if ($code !== 0) {
+          $this->logger()->warning("migrate:rollback $id exited with code $code (continuing).");
+        }
       }
     }
 
     $this->io()->section('Import');
-    $code = $this->invokeMigrate('migrate:import', $options);
-    if ($code !== 0) {
-      $this->logger()->error("migrate:import exited with code $code");
-      return CommandResult::exitCode($code);
+    $requested = array_filter(array_map('trim', explode(',', (string) ($options['migrations'] ?? ''))));
+    $order = $requested ? array_values(array_intersect(self::MIGRATION_ORDER, $requested)) : self::MIGRATION_ORDER;
+    // Always run migrations one-by-one in explicit dependency order. Calling
+    // migrate:import --group does NOT reliably honour migration_dependencies
+    // when a parent migration ended with non-zero failures (it then refuses
+    // to run children with a "Missing migrations" error). Sequential runs
+    // make each step's success criterion explicit and let us keep going
+    // past partial failures (icms_files commonly has 404 skips).
+    foreach ($order as $id) {
+      $this->io()->section(sprintf('Importing %s', $id));
+      $code = $this->invokeMigrate('migrate:import', ['migrations' => $id] + $options);
+      if ($code !== 0) {
+        // Non-zero is expected when individual rows are skipped (icms_files
+        // 404 etc.). Log and continue rather than blocking children.
+        $this->logger()->warning(sprintf('migrate:import %s exited with code %d (continuing).', $id, $code));
+      }
     }
 
     $this->io()->success('ICMS import finished. Run `drush icms-migration:status` for details.');

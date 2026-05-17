@@ -7,6 +7,7 @@ use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\migrate\MigrateException;
 use Drupal\migrate\MigrateExecutableInterface;
+use Drupal\migrate\MigrateSkipRowException;
 use Drupal\migrate\ProcessPluginBase;
 use Drupal\migrate\Row;
 use GuzzleHttp\ClientInterface;
@@ -113,7 +114,15 @@ class IcmsFileDownload extends ProcessPluginBase implements ContainerFactoryPlug
       ]);
     }
     catch (GuzzleException $e) {
-      throw new MigrateException(sprintf('icms_file_download: GET %s failed: %s', $url, $e->getMessage()));
+      // Clean up any partially-written sink before signalling the failure so
+      // we don't leave 0-byte stubs behind.
+      if (file_exists($realPath)) {
+        @unlink($realPath);
+      }
+      // A missing source file is common when migrating from a live site that
+      // has been pruned; log + skip rather than aborting the whole batch.
+      $migrate_executable->saveMessage(sprintf('icms_file_download: GET %s failed: %s', $url, $e->getMessage()));
+      throw new MigrateSkipRowException(sprintf('Skipping file row: %s', $url), FALSE);
     }
 
     return $destination;
