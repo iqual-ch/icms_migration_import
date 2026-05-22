@@ -1,5 +1,5 @@
 name: ICMS Migration Import
-description: Migrate-API driven importer that consumes an icms-import-plan.json produced by the icms-migration-workbench and creates ICMS pages, paragraphs, media and files in the target Drupal site.
+description: Target ICMS Drupal-side migration support module with read-only target-structure export and Migrate-API import wrappers.
 package: ICMS
 type: module
 core_version_requirement: ^10.3 || ^11

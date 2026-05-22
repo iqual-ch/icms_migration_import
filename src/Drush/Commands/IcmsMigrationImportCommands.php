@@ -4,11 +4,14 @@ namespace Drupal\icms_migration_import\Drush\Commands;
 
 use Consolidation\AnnotatedCommand\CommandResult;
 use Drupal\Core\State\StateInterface;
+use Drupal\icms_migration_import\TargetStructure\TargetStructureCollector;
+use Drupal\icms_migration_import\TargetStructure\TargetStructureJsonWriter;
 use Drupal\icms_migration_import\Plugin\migrate\source\IcmsPlanBase;
 use Drush\Attributes as CLI;
 use Drush\Commands\AutowireTrait;
 use Drush\Commands\DrushCommands;
 use Drush\Drush;
+use Throwable;
 
 /**
  * Drush wrapper around the `icms_migration` migrate group.
@@ -54,8 +57,35 @@ class IcmsMigrationImportCommands extends DrushCommands {
 
   public function __construct(
     protected StateInterface $state,
+    protected TargetStructureCollector $targetStructureCollector,
+    protected TargetStructureJsonWriter $targetStructureJsonWriter,
   ) {
     parent::__construct();
+  }
+
+  /**
+   * Export the target ICMS Drupal structure as a read-only JSON artifact.
+   */
+  #[CLI\Command(name: 'icms-migration:target-structure-export', aliases: ['icms-target-structure-export', 'icms-mig-target-export'])]
+  #[CLI\Argument(name: 'output', description: 'Destination JSON path or stream URI, e.g. private://target-structure.json or /absolute/path/target-structure.json.')]
+  #[CLI\Usage(name: 'drush icms-migration:target-structure-export private://target-structure.json', description: 'Export target structure to Drupal private files.')]
+  #[CLI\Usage(name: 'drush icms-migration:target-structure-export /absolute/path/target-structure.json', description: 'Export target structure to an absolute filesystem path.')]
+  public function targetStructureExport(string $output): CommandResult {
+    try {
+      $artifact = $this->targetStructureCollector->collect();
+      $destination = $this->targetStructureJsonWriter->write($artifact, $output);
+    }
+    catch (Throwable $e) {
+      $this->logger()->error(sprintf('Target structure export failed: %s', $e->getMessage()));
+      return CommandResult::exitCode(1);
+    }
+
+    foreach ($artifact['warnings'] ?? [] as $warning) {
+      $this->logger()->warning((string) $warning);
+    }
+
+    $this->io()->success(sprintf('ICMS target structure exported to %s', $destination));
+    return CommandResult::exitCode(0);
   }
 
   /**

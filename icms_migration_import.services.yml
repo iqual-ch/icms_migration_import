@@ -1,0 +1,23 @@
+services:
+  icms_migration_import.target_structure_collector:
+    class: Drupal\icms_migration_import\TargetStructure\TargetStructureCollector
+    arguments:
+      - '@entity_type.manager'
+      - '@entity_field.manager'
+      - '@entity_type.bundle.info'
+      - '@module_handler'
+      - '@config.factory'
+      - '@router.request_context'
+
+  Drupal\icms_migration_import\TargetStructure\TargetStructureCollector:
+    alias: icms_migration_import.target_structure_collector
+    public: true
+
+  icms_migration_import.target_structure_json_writer:
+    class: Drupal\icms_migration_import\TargetStructure\TargetStructureJsonWriter
+    arguments:
+      - '@file_system'
+
+  Drupal\icms_migration_import\TargetStructure\TargetStructureJsonWriter:
+    alias: icms_migration_import.target_structure_json_writer
+    public: true
