@@ -73,19 +73,31 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
     if (!is_array($value) || $value === []) {
       return NULL;
     }
-    foreach ($value as $name => $def) {
-      // Ignore planner metadata keys that share the same map.
-      if (!is_string($name) || $name === '' || $name[0] === '_') {
-        continue;
+    // Stash the row so normalize() can resolve sibling paragraph references.
+    $this->currentRow = $row;
+    try {
+      foreach ($value as $name => $def) {
+        // Ignore planner metadata keys that share the same map.
+        if (!is_string($name) || $name === '' || $name[0] === '_') {
+          continue;
+        }
+        $normalized = $this->normalize($def);
+        if ($normalized === NULL) {
+          continue;
+        }
+        $row->setDestinationProperty($name, $normalized);
       }
-      $normalized = $this->normalize($def);
-      if ($normalized === NULL) {
-        continue;
-      }
-      $row->setDestinationProperty($name, $normalized);
+    }
+    finally {
+      $this->currentRow = NULL;
     }
     return NULL;
   }
+
+  /**
+   * Currently-processed row (set during transform()).
+   */
+  protected ?Row $currentRow = NULL;
 
   /**
    * Convert a plan field definition into a Drupal-compatible field value.
@@ -109,6 +121,20 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
       }
       $mid = $this->lookupMediaTargetId($sid);
       return $mid === NULL ? NULL : ['target_id' => $mid];
+    }
+
+    // Entity reference to a sibling paragraph row emitted by the same
+    // icms_paragraphs migration (used for child icms_button_element paragraphs
+    // emitted alongside their parent component). Resolves the sibling's
+    // composite source id and returns target_id + target_revision_id.
+    if (array_key_exists('sourceParagraphRelative', $def)) {
+      $index = (int) $def['sourceParagraphRelative'];
+      $ref = $this->lookupSiblingParagraphRef($index);
+      return $ref;
+    }
+    if (array_key_exists('sourceParagraphId', $def)) {
+      $ref = $this->lookupParagraphRefByCompositeId((string) $def['sourceParagraphId']);
+      return $ref;
     }
 
     // Formatted text: {value: '...', format?: '...'}.
@@ -166,6 +192,53 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
       ->execute()
       ->fetchField();
     return $found ? (int) $found : NULL;
+  }
+
+  /**
+   * Resolve a sibling paragraph reference using the current row context.
+   *
+   * Builds the composite source id `<pageUuid>:<delta>:<index>` and looks it
+   * up in the paragraphs migrate_map so the parent paragraph can reference
+   * children emitted just before it in the same migration.
+   */
+  protected function lookupSiblingParagraphRef(int $relativeIndex): ?array {
+    if ($this->currentRow === NULL) {
+      return NULL;
+    }
+    $pageUuid = (string) $this->currentRow->getSourceProperty('pageUuid');
+    $delta = (int) $this->currentRow->getSourceProperty('delta');
+    if ($pageUuid === '') {
+      return NULL;
+    }
+    $compositeId = sprintf('%s:%d:%d', $pageUuid, $delta, $relativeIndex);
+    return $this->lookupParagraphRefByCompositeId($compositeId);
+  }
+
+  /**
+   * Look up a paragraph entity_reference_revisions ref by composite source id.
+   */
+  protected function lookupParagraphRefByCompositeId(string $compositeId): ?array {
+    if ($compositeId === '') {
+      return NULL;
+    }
+    $migration = (string) ($this->configuration['paragraphs_migration'] ?? 'icms_paragraphs');
+    $table = 'migrate_map_' . $migration;
+    if (!$this->database->schema()->tableExists($table)) {
+      return NULL;
+    }
+    $found = $this->database->select($table, 'm')
+      ->fields('m', ['destid1', 'destid2'])
+      ->condition('sourceid1', $compositeId)
+      ->execute()
+      ->fetchAssoc();
+    if (!$found || empty($found['destid1'])) {
+      return NULL;
+    }
+    $ref = ['target_id' => (int) $found['destid1']];
+    if (!empty($found['destid2'])) {
+      $ref['target_revision_id'] = (int) $found['destid2'];
+    }
+    return $ref;
   }
 
 }

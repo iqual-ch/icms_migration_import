@@ -49,18 +49,22 @@ class IcmsPlanParagraphs extends IcmsPlanBase {
           continue;
         }
         $delta = (int) ($comp['delta'] ?? 0);
-        $bundle = (string) (($comp['target']['paragraphBundle'] ?? '') ?: '');
-        if ($bundle === '') {
-          continue;
-        }
+        $defaultBundle = (string) (($comp['target']['paragraphBundle'] ?? '') ?: '');
         $paragraphs = $comp['target']['paragraphs'] ?? [];
         foreach ($paragraphs as $index => $pData) {
+          // Each paragraph entry may override the component-level bundle so
+          // we can inline child paragraphs (e.g. icms_button_element) alongside
+          // the primary component paragraph.
+          $rowBundle = (string) ($pData['paragraphBundle'] ?? $defaultBundle);
+          if ($rowBundle === '') {
+            continue;
+          }
           $rows[] = [
             'sourceParagraphId' => sprintf('%s:%d:%d', $pageUuid, $delta, (int) $index),
             'pageUuid' => $pageUuid,
             'delta' => $delta,
             'index' => (int) $index,
-            'bundle' => $bundle,
+            'bundle' => $rowBundle,
             'fields' => $pData['fields'] ?? [],
             // Default langcode of the host page (translations are added later).
             'langcode' => (string) ($page['target']['langcode']
