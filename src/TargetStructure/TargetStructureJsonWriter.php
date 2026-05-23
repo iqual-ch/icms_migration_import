@@ -2,6 +2,7 @@
 
 namespace Drupal\icms_migration_import\TargetStructure;
 
+use Drupal\Core\File\FileExists;
 use Drupal\Core\File\FileSystemInterface;
 use RuntimeException;
 
@@ -41,10 +42,11 @@ class TargetStructureJsonWriter {
     $json = json_encode($artifact, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     $json .= PHP_EOL;
 
-    $bytes = @file_put_contents($destination, $json, LOCK_EX);
-    if ($bytes === FALSE) {
-      $error = error_get_last();
-      throw new RuntimeException(sprintf('Could not write target structure to %s%s', $destination, isset($error['message']) ? ': ' . $error['message'] : '.'));
+    try {
+      $this->fileSystem->saveData($json, $destination, FileExists::Replace);
+    }
+    catch (\Throwable $e) {
+      throw new RuntimeException(sprintf('Could not write target structure to %s: %s', $destination, $e->getMessage()), 0, $e);
     }
 
     return $destination;
