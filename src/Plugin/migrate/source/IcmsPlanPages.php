@@ -51,7 +51,10 @@ class IcmsPlanPages extends IcmsPlanBase {
           continue;
         }
         $delta = (int) ($comp['delta'] ?? 0);
-        foreach (array_keys($comp['target']['paragraphs'] ?? []) as $index) {
+        foreach (($comp['target']['paragraphs'] ?? []) as $index => $paragraph) {
+          if (is_array($paragraph) && array_key_exists('attachToPage', $paragraph) && $paragraph['attachToPage'] === FALSE) {
+            continue;
+          }
           $paragraphRefs[] = [
             'sourceParagraphId' => sprintf('%s:%d:%d', $uuid, $delta, (int) $index),
           ];

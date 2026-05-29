@@ -81,7 +81,7 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
         if (!is_string($name) || $name === '' || $name[0] === '_') {
           continue;
         }
-        $normalized = $this->normalize($def);
+        $normalized = $this->normalize($def, $name);
         if ($normalized === NULL) {
           continue;
         }
@@ -102,11 +102,22 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
   /**
    * Convert a plan field definition into a Drupal-compatible field value.
    */
-  protected function normalize(mixed $def): mixed {
+  protected function normalize(mixed $def, ?string $fieldName = NULL): mixed {
     if ($def === NULL || $def === '') {
       return NULL;
     }
     if (is_string($def) || is_numeric($def) || is_bool($def)) {
+      if ($def === 'default' && $fieldName !== NULL) {
+        return match ($fieldName) {
+          // The plan uses `default` as a placeholder, but GraphQL exposes the
+          // stored value directly. The frontend only renders title tags for
+          // concrete weights (h1/h2/h3/p), so keep migrated paragraphs aligned
+          // with Drupal's configured field default.
+          'field_icms_title_weight' => 'h2',
+          'field_icms_title_style' => 'heading-2',
+          default => $def,
+        };
+      }
       return $def;
     }
     if (!is_array($def)) {
@@ -153,7 +164,7 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
     if (array_is_list($def)) {
       $out = [];
       foreach ($def as $item) {
-        $n = $this->normalize($item);
+        $n = $this->normalize($item, $fieldName);
         if ($n !== NULL) {
           $out[] = $n;
         }
@@ -163,7 +174,7 @@ class IcmsFieldValue extends ProcessPluginBase implements ContainerFactoryPlugin
 
     // Plan multi-value wrapper: {source: '...', values: [...]}.
     if (array_key_exists('values', $def) && is_array($def['values'])) {
-      return $this->normalize(array_values($def['values']));
+      return $this->normalize(array_values($def['values']), $fieldName);
     }
 
     // Planning-only markers — never written.

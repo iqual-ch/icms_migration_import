@@ -219,12 +219,19 @@ class IcmsMigrationImportCommands extends DrushCommands {
     if (!empty($options['limit'])) {
       $opts['limit'] = (int) $options['limit'];
     }
+    if ($command === 'migrate:import') {
+      // The wrapper already enforces dependency order explicitly. Let later
+      // migrations run even when a parent had skipped rows, because Drupal's
+      // required migration_dependencies treat that as an unmet requirement.
+      $opts['force'] = TRUE;
+      $opts['continue-on-failure'] = TRUE;
+    }
     $process = Drush::drush(Drush::aliasManager()->getSelf(), $command, $args, $opts);
     // Always run without TTY: the wrapper is typically invoked from CI or
     // from `ddev drush ...` where /dev/tty is not available even though
     // Drush's own input may report itself as interactive.
     $process->setTty(FALSE);
-    $process->mustRun(function (string $type, string $buffer): void {
+    $process->run(function (string $type, string $buffer): void {
       $this->output()->write($buffer);
     });
     return $process->getExitCode() ?? 0;
