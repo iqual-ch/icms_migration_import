@@ -5,7 +5,7 @@ namespace Drupal\icms_migration_import\Plugin\migrate\source;
 /**
  * Source plugin emitting one row per paragraph the plan wants to create.
  *
- * A page in the plan contains `components[]`, each component contains
+ * A node row in the plan contains `components[]`, each component contains
  * `target.paragraphs[]` (often a single paragraph, sometimes multiple
  * when the component was split for cardinality reasons). This plugin
  * flattens all (page, component, paragraph) tuples into one row each,
@@ -34,7 +34,7 @@ class IcmsPlanParagraphs extends IcmsPlanBase {
   protected function rows(): array {
     $plan = $this->loadPlan();
     $rows = [];
-    foreach ($plan['pages'] ?? [] as $page) {
+    foreach ($this->planNodeRows($plan) as $page) {
       $pageStatus = strtoupper((string) ($page['status'] ?? 'AUTO'));
       if ($pageStatus === 'BLOCKED') {
         continue;
@@ -66,6 +66,7 @@ class IcmsPlanParagraphs extends IcmsPlanBase {
             'index' => (int) $index,
             'bundle' => $rowBundle,
             'fields' => $pData['fields'] ?? [],
+            'options' => $pData['options'] ?? [],
             // Default langcode of the host page (translations are added later).
             'langcode' => (string) ($page['target']['langcode']
               ?? $page['source']['defaultLangcode']
@@ -95,6 +96,7 @@ class IcmsPlanParagraphs extends IcmsPlanBase {
       'index' => $this->t('Position of the paragraph inside a split component.'),
       'bundle' => $this->t('Target paragraph bundle.'),
       'fields' => $this->t('Map of {fieldName: planFieldValue}; normalized by icms_field_value process plugin.'),
+      'options' => $this->t('Map of Blökkli option values stored as paragraph behavior settings.'),
       'langcode' => $this->t('Default langcode inherited from the host page.'),
     ];
   }

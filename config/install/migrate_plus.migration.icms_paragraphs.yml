@@ -21,6 +21,11 @@ process:
     source: fields
     media_migration: icms_media
 
+  # Store Blökkli component options in paragraph behavior settings.
+  _blokkli_options:
+    plugin: icms_blokkli_options
+    source: options
+
 destination:
   plugin: 'entity_reference_revisions:paragraph'
 

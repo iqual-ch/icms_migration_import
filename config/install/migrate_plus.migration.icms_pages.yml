@@ -16,31 +16,14 @@ process:
     plugin: default_value
     default_value: 1
 
-  # Resolve the ordered list of paragraph references via icms_paragraphs.
-  # Each sub-row is {sourceParagraphId: '<uuid>:<delta>:<idx>'}, the
-  # migration_lookup returns [paragraph_id, paragraph_revision_id] which
-  # the entity_reference_revisions field stores as target_id / target_revision_id.
-  paragraphField:
-    plugin: get
-    source: paragraphField
-  field_icms_paragraphs:
-    plugin: sub_process
+  # Resolve paragraph references into the paragraph field configured by the
+  # plan. This keeps imports working for every node bundle, including future
+  # bundles that do not use field_icms_paragraphs.
+  _paragraph_refs:
+    plugin: icms_paragraph_references
     source: paragraphRefs
-    process:
-      temp_ids:
-        plugin: migration_lookup
-        migration: icms_paragraphs
-        source: sourceParagraphId
-      target_id:
-        plugin: extract
-        source: '@temp_ids'
-        index:
-          - 0
-      target_revision_id:
-        plugin: extract
-        source: '@temp_ids'
-        index:
-          - 1
+    field_source: paragraphField
+    paragraphs_migration: icms_paragraphs
 
   # Optional extra node-level fields.
   _unpack_fields:

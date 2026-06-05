@@ -23,7 +23,8 @@ use Drupal\migrate\Plugin\migrate\source\SourcePluginBase;
  *   "site":   {"name": "...", "defaultLangcode": "de"},
  *   "gate":   {"status": "ALLOWED|BLOCKED"},
  *   "media":  [ ...IcmsPlanMedia rows... ],
- *   "pages":  [ ...IcmsPlanPages rows...  ]
+ *   "pages":  [ ...IcmsPlanPages rows...  ],
+ *   "content": [ ...additional node rows... ]
  * }
  * @endcode
  *
@@ -66,7 +67,8 @@ abstract class IcmsPlanBase extends SourcePluginBase {
    * Load and validate the plan.
    *
    * @return array
-   *   Decoded plan with at least `format`, `pages`, and (optionally) `media`.
+  *   Decoded plan with at least `format` and (optionally) `media`, `pages`,
+  *   and `content` arrays.
    *
    * @throws \Drupal\migrate\MigrateException
    *   On invalid JSON or unknown format.
@@ -85,11 +87,43 @@ abstract class IcmsPlanBase extends SourcePluginBase {
     if (strpos($format, 'icms-import-plan') !== 0) {
       throw new \Drupal\migrate\MigrateException("Plan format unrecognized: '$format' (expected 'icms-import-plan-v*')");
     }
-    if (!isset($data['pages']) || !is_array($data['pages'])) {
-      throw new \Drupal\migrate\MigrateException("Plan has no 'pages' array: $path");
+    if (isset($data['pages']) && !is_array($data['pages'])) {
+      throw new \Drupal\migrate\MigrateException("Plan 'pages' value is not an array: $path");
+    }
+    if (isset($data['content']) && !is_array($data['content'])) {
+      throw new \Drupal\migrate\MigrateException("Plan 'content' value is not an array: $path");
+    }
+    if (empty($data['pages']) && empty($data['content'])) {
+      throw new \Drupal\migrate\MigrateException("Plan has no 'pages' or 'content' rows: $path");
     }
     static::$planCache[$path] = $data;
     return $data;
+  }
+
+  /**
+   * Return all node-like rows from the plan.
+   *
+   * Earlier exports used only `pages[]`. Newer exports can place additional
+   * node bundles such as news and events in `content[]`. Both shapes use the
+   * same row schema, so the node, paragraph, and translation migrations should
+   * process them together.
+   *
+   * @param array $plan
+   *   Decoded migration plan.
+   *
+   * @return array<int, array>
+   *   Node rows from `pages[]` followed by `content[]`.
+   */
+  protected function planNodeRows(array $plan): array {
+    $rows = [];
+    foreach (['pages', 'content'] as $key) {
+      foreach (($plan[$key] ?? []) as $row) {
+        if (is_array($row)) {
+          $rows[] = $row;
+        }
+      }
+    }
+    return $rows;
   }
 
   /**

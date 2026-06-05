@@ -3,7 +3,7 @@
 namespace Drupal\icms_migration_import\Plugin\migrate\source;
 
 /**
- * Source plugin emitting one row per non-default-language page translation.
+ * Source plugin emitting one row per non-default-language node translation.
  *
  * A page in the plan exposes `source.translations[langcode]` for every
  * language it covers; the default language is materialised by
@@ -32,7 +32,7 @@ class IcmsPlanTranslations extends IcmsPlanBase {
     $plan = $this->loadPlan();
     $defaultLang = (string) ($plan['site']['defaultLangcode'] ?? 'en');
     $rows = [];
-    foreach ($plan['pages'] ?? [] as $page) {
+    foreach ($this->planNodeRows($plan) as $page) {
       $pageStatus = strtoupper((string) ($page['status'] ?? 'AUTO'));
       if ($pageStatus === 'BLOCKED') {
         continue;
